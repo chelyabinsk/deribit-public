@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <link rel="icon" type="image/x-icon" href="https://www.iconarchive.com/download/i140904/microsoft/fluentui-emoji-flat/Rabbit-Flat.ico"> -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://getbootstrap.com/docs/5.3/assets/css/docs.css" rel="stylesheet">
+    <title>Zaikacap</title>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+
+    <style media="only screen">
+      html, body {
+          height: 100%;
+          width: 100%;
+          margin: 0;
+          box-sizing: border-box;
+          -webkit-overflow-scrolling: touch;
+      }
+  
+      html {
+          position: absolute;
+          top: 0;
+          left: 0;
+          padding: 0;
+          overflow: auto;
+      }
+  
+      body {
+        padding: 1rem;
+        overflow: auto;
+      }
+      .ag-header-cell-label .ag-header-cell-text {
+        /* word-break: normal !important; */
+        white-space: normal !important;
+        justify-content: center;
+        align-items: center;
+      }
+      .ag-theme-alpine .ag-cell-value {
+        line-height: 20px !important;
+        word-break: normal; /* prevent words from breaking */
+        /*padding-top: 5px; /* space top */
+        /*padding-bottom: 5px; /* space bottom */
+        
+        text-align: center !important;
+        /* vertical-align: middle; */
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+  </style>
+
+  </head>
+  <body class="p-3 m-0 border-0 bd-example m-0 border-0">
+
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/">Zaikacap</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          <ul class="navbar-nav">
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Fitting and Quoting
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('fitter_plots')}}">Volatility Graph</a></li>
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('quoting_tables')}}">Quoting Screen</a></li>
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('perpetual_future')}}">Perpetual Future</a></li>
+                <li><a class="dropdown-item nav-link disabled" href="#">Greeks</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Trades
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item nav-link disabled" href="#">Public Option Trades</a></li>
+                <li><a class="dropdown-item nav-link disabled" href="#">Public Future Trades</a></li>
+                <li><a class="dropdown-item nav-link disabled" href="#">Own Option Trades</a></li>
+                <li><a class="dropdown-item nav-link disabled" href="#">Own Future Trades</a></li>
+                <li><a class="dropdown-item nav-link disabled" href="#">Own Trades</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Trading Graphs
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('implied_probs')}}">Implied Probabilities</a></li>
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('zeta_profile')}}">Zeta Profile</a></li>
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('futures_term')}}">Futures Term Structure</a></li>
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('atm_vol_structure')}}">ATM Vol Term Structure</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Admin
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item nav-link enabled" href="{{ url_for('system_status') }}">Status</a></li>
+              </ul>
+            </li>
+
+          </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="container-fluid" style="height:100%">
+      {% block content %} {% endblock %}
+    </div>
+
+  </body>
+</html>

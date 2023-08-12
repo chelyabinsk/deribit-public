@@ -1,0 +1,11 @@
+flask
+numpy
+scipy
+flask_sock
+redis
+pymongo
+websocket-client
+requests
+regex
+pandas
+scikit-learn

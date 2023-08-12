@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+
+<h1 class="display-1">{% block title %} Zeta Profile {% endblock %}</h1>
+
+<nav>
+    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+      {% for expiration_str in expirations_list %}
+        {% if loop.first %}
+            <button class="nav-link active" id="{{ expiration_str}}" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab" aria-controls="nav-profile" aria-selected="false">{{ expiration_str}}</button>
+        {% else %}
+            <button class="nav-link" id="{{ expiration_str}}" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab" aria-controls="nav-profile" aria-selected="false">{{ expiration_str}}</button>
+        {% endif %}
+       {% endfor %}
+    </div>
+  </nav>
+</nav>
+<canvas id="chart_zeta_profile" height="100%"></canvas>
+<div class="form-check">
+    <input class="form-check-input" type="radio" name="flexRadioDefault" id="plotWithNormalisedStrikes" checked>
+    <label class="form-check-label" for="flexRadioDefault1">
+      Normalized Strike
+    </label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="radio" name="flexRadioDefault" id="plotWithNormalStrikes" disabled>
+    <label class="form-check-label" for="flexRadioDefault2">
+        Strike
+    </label>
+</div>
+
+
+
+<script>
+var zeta_profile_tools = null;
+
+var chart_zeta_profile = null;
+
+var chart_zeta_profile_data = {
+    datasets: [{
+        label: 'Zeta',
+        data: [],
+        backgroundColor: 'rgb(255, 99, 132)',
+        pointBorderColor: ['#000000'],
+        showLine: true,
+        borderColor: 'rgb(255, 99, 132)',
+    },
+    {
+        label: 'Forward',
+        data: [],
+        backgroundColor: 'rgb(192, 192, 192)',
+        showLine: true,
+        yAxisID: 'y1',
+    }
+    ],
+};
+
+config_zeta_profile = {
+    type: 'scatter',
+    data: chart_zeta_profile_data,
+    options: {
+        elements: {
+            point: {
+                radius: 0
+            }
+        },
+        resposive: true,
+        scales: {
+            x: {
+                type: 'linear',
+                position: 'bottom',
+                title: {
+                    display: true,
+                    text: 'Normalized Strike'
+                },
+                ticks: {
+                    stepSize: 1
+                }
+            },
+            y: {
+                type: 'linear',
+                position: 'bottom',
+                title: {
+                    display: true,
+                    text: 'Zeta Profile'
+                },
+            },
+            y1: {
+                type: 'linear',
+                display: false,
+                position: 'right',
+
+                // grid line settings
+                grid: {
+                    drawOnChartArea: false, // only want the grid lines for one axis to show up
+                },
+
+                title: {
+                    display: true,
+                    text: 'Probability Density Function'
+                },
+            },
+        },
+        title: {
+            display: true,
+            text: 'Volatility fit - Put'
+        },
+        plugins: {
+            annotation: {
+                annotations: {
+                    line1: {
+                        type: 'line',
+                        xMin: 0,
+                        xMax: 0,
+                        borderColor: 'rgb(192, 192, 192)',
+                        borderWidth: 2,
+                    }
+                }
+            },
+            zoom: {
+                zoom: {
+                    wheel: {
+                        enabled: true,
+                        modifierKey: "alt",
+                    },
+                    pinch: {
+                        enabled: true,
+                        modifierKey: "alt",
+                    },
+                    mode: 'xy',
+                }
+            },
+            pan: {
+                enabled: true,
+            },
+            drag: {
+                enabled: true,
+            },
+        }
+    }
+};
+
+const initialise_plots = () => {
+    const ctx_zeta_profile = document.getElementById('chart_zeta_profile');
+
+    chart_zeta_profile = new Chart(ctx_zeta_profile, config_zeta_profile);
+}
+
+</script>
+
+<script>
+    $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var target = $(e.target).attr("id")
+        selected_fitter_plot_expiration_str = target;
+    });
+</script>
+
+<script>
+var selected_fitter_plot_expiration_str = "";
+{% for expiration_str in expirations_list %}{% if loop.first%}var selected_fitter_plot_expiration_str = "{{expiration_str}}"{% endif %}{% endfor %}
+
+var protocol = "wss://";
+if (location.hostname == "localhost") {
+  protocol = "ws://";
+}
+// Open websocket connection
+const socket_path = protocol + location.host + "/ws_data_point";
+var ws;
+var reconnect_counter = 0;
+var try_reconnect = false;
+
+ws = new WebSocket(socket_path);
+
+ws.addEventListener("message", (ev) => {
+  process_incoming_ws(ev.data);
+});
+
+ws.addEventListener("open", (ev) => {
+  console.log("opened");
+  reconnect_counter = 0;
+  try_reconnect = false;
+  send_initial_data_ws();
+});
+
+ws.addEventListener("close", (ev) => {
+  delete ws;
+  try_reconnect = true;
+});
+
+const ws_reconnector = (data) => {
+  setInterval(function () {
+    request_counter = 0
+    if (try_reconnect) {
+      delete ws;
+
+      reconnect_counter++;
+
+      ws = new WebSocket(socket_path);
+
+      ws.addEventListener("message", (ev) => {
+        process_incoming_ws(ev.data);
+      });
+
+      ws.addEventListener("open", (ev) => {
+        console.log("opened");
+        reconnect_counter = 0;
+        try_reconnect = false;
+        send_initial_data_ws();
+      });
+
+      ws.addEventListener("close", (ev) => {
+        delete ws;
+        try_reconnect = true;
+      });
+    }
+
+    if(ws) {
+        ws.send(
+            JSON.stringify({
+            "message-type": "give-me-da-data",
+            "message-source": "/zeta-profile",
+            "user-secret": "none",
+            "request-body" : {
+                "selection-str" : selected_fitter_plot_expiration_str,
+                "request-count" : request_counter
+            }
+        })
+        )
+
+        request_counter++;
+    }
+
+  }, 1000);
+};
+
+
+const send_initial_data_ws = () => {
+  ws.send(
+    JSON.stringify({
+      "message-type": "initial",
+      "message-source": "/zeta-profile",
+      "reconnect-counter": reconnect_counter,
+      "user-secret": "none",
+    })
+  );
+};
+
+const process_incoming_ws = (data) => {
+    const parsed_data = JSON.parse(data);
+
+    if (parsed_data["message-name"] == "send-updates") {
+        console.log(parsed_data["data"]);
+
+        // Update plots        
+        if($("input[id='plotWithNormalisedStrikes']:checked").val()) {
+            config_zeta_profile.options.scales.x.title.text = "Normalized Strike"
+
+            chart_zeta_profile.data.datasets[0].data = parsed_data["data"]["zeta_profile"];
+            chart_zeta_profile.data.datasets[1].data = parsed_data["data"]["forward"];
+
+            // chart_zeta_profile.data.datasets[2].data = parsed_data["data"]["underlying_name"];
+            chart_zeta_profile.data.datasets[1].label = "forward-" + parsed_data["data"]["underlying_name"];
+        } else {
+            config_zeta_profile.options.scales.x.title.text = "Strike"
+        }
+
+        chart_zeta_profile.update();
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    initialise_plots();
+    ws_reconnector();
+});
+
+</script>
+{% endblock %}

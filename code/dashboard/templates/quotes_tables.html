@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- <script src="static/ag-grid-enterprise.min.js"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@30.0.6/dist/ag-grid-community.min.js"></script>
+
+<h1 class="display-1">{% block title %} Quoting Screen {% endblock %}</h1>
+
+{% for expiration_str in expirations_list %}
+    <p class="d-grid gap-2">
+        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#{{ expiration_str }}" aria-expanded="true" aria-controls="{{ expiration_str }}">
+            {{ expiration_str }}
+        </button>
+    </p>
+    <div class="collapse show" id="{{ expiration_str }}">
+        <div class="card card-body" style="height: inherit;">
+            <div id="table_{{ expiration_str }}" style="height: inherit;" class="ag-theme-alpine"></div>
+        </div>
+    </div>
+{% endfor %}
+
+<script>
+
+{% for expiration_str in expirations_list %}
+let pricing_table_options_{{ expiration_str }} = {
+    columnDefs: [
+    {field: "row_number", hide: true},
+
+    {
+      headerName: "Δ", field: "call_delta", suppressCellFlash: true, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.delta_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    },
+
+    {
+      headerName: "NS", field: "call_normalised_strike", suppressCellFlash: true, hide: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.normalised_strike_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    },
+
+    { headerName: "Desired Bid", field: "call_bid", suppressCellFlash: false, cellStyle: { 'padding-left': 0, 'padding-right': 0 } },
+    {
+      headerName: "Bid #", field: "call_bid_num", suppressCellFlash: false,
+      cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.call_bid_num_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "call_bid_num_colour", hide: true },
+    {
+      headerName: "Bid", field: "market_call_bid", hide: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.call_bid_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "call_bid_colour", hide: true },
+    
+    {
+      headerName: "Fair", field: "call_fair", suppressCellFlash: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.fair_colour, color: 'red', 'font-weight': 'bold', 'padding-left': 0, 'padding-right': 0, whiteSpace: 'normal', autoHeight: true, wrapText: true, fontSize: '11px' };
+        }
+      }
+    }, { field: "fair_colour", hide: true },
+
+    {
+      headerName: "Ask", field: "market_call_ask", hide: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.call_ask_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "call_ask_colour", hide: true },
+
+    {
+      headerName: "Ask #", field: "call_ask_num", suppressCellFlash: false,
+      cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.call_ask_num_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "call_ask_num_colour", hide: true },
+    
+    { headerName: "Desired Ask", field: "call_ask", suppressCellFlash: false, cellStyle: { 'padding-left': 0, 'padding-right': 0 } },
+
+    {
+      headerName: "Pos", field: "active_size", cellStyle: (params) => {
+        if (params.data) {
+          return { color: params.data.active_size_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "active_size_colour", hide: true },
+
+    {
+      headerName: "Strike", field: "strike", suppressCellFlash: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.strike_colour, 'padding-left': 0, 'padding-right': 0};
+        }
+      }
+    }, { field: "strike_colour", hide: true },
+
+    {
+      headerName: "Vol change 24H", field: "spline_ivs_24h_diff", hide: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.spline_ivs_24h_diff_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "spline_ivs_24h_diff_colour", hide: true },
+
+    { headerName: "Desired Bid", field: "put_bid", suppressCellFlash: false, cellStyle: { 'padding-left': 0, 'padding-right': 0 } },
+
+    {
+      headerName: "Bid #", field: "put_bid_num", suppressCellFlash: false,
+      cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.put_bid_num_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "put_bid_num_colour", hide: true },
+
+    {
+      headerName: "Bid", field: "market_put_bid", hide: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.put_bid_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "put_bid_colour", hide: true },
+
+    {
+      headerName: "Fair", field: "put_fair", suppressCellFlash: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.fair_colour, color: 'red', 'font-weight': 'bold', 'padding-left': 0, 'padding-right': 0, whiteSpace: 'normal', autoHeight: true, wrapText: true, fontSize: '11px' };
+        }
+      }
+    }, { field: "fair_colour", hide: true },
+
+    {
+      headerName: "Ask", field: "market_put_ask", hide: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.put_ask_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "put_ask_colour", hide: true },
+
+    {
+      headerName: "Ask #", field: "put_ask_num", suppressCellFlash: false,
+      cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.put_ask_num_colour, 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "put_ask_num_colour", hide: true },
+
+    { headerName: "Desired Ask", field: "put_ask", suppressCellFlash: false, cellStyle: { 'padding-left': 0, 'padding-right': 0 } },
+
+    {
+      headerName: "NS", field: "put_normalised_strike", suppressCellFlash: true, hide: false, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.normalised_strike_colour, color: "black", 'padding-left': 0, 'padding-right': 0 }
+        }
+      }
+    }, { field: "normalised_strike_colour", hide: true },
+
+    {
+      headerName: "Δ", field: "put_delta", suppressCellFlash: true, cellStyle: (params) => {
+        if (params.data) {
+          return { backgroundColor: params.data.delta_colour, color: 'black', 'padding-left': 0, 'padding-right': 0 };
+        }
+      }
+    }, { field: "delta_colour", hide: true },
+    
+    { field: "fair_colour", hide: true },
+
+  ],
+  defaultColDef: {
+    flex: 1,
+  },
+  domLayout: 'autoHeight',
+  rowData: [],
+  rowSelection: 'multiple',
+  animateRows: true,
+  getRowId: (params) => params.data.row_number,
+}
+{% endfor %}
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    {% for expiration_str in expirations_list %}
+        var gridDiv_{{ expiration_str }} = document.querySelector('#table_{{ expiration_str }}');
+        new agGrid.Grid(gridDiv_{{ expiration_str }}, pricing_table_options_{{ expiration_str }});
+        // new agGrid.Grid(gridDiv, pricing_table_template);
+    {% endfor %}
+});
+</script>
+
+<script>
+
+var protocol = "wss://";
+if (location.hostname == "localhost") {
+    protocol = "ws://";
+}
+// Open websocket connection
+const socket_path = protocol + location.host + "/ws_data_point";
+var ws;
+var reconnect_counter = 0;
+var try_reconnect = false;
+
+ws = new WebSocket(socket_path);
+
+ws.addEventListener("message", (ev) => {
+    process_incoming_ws(ev.data);
+});
+
+ws.addEventListener("open", (ev) => {
+    console.log("opened");
+    reconnect_counter = 0;
+    try_reconnect = false;
+    send_initial_data_ws();
+});
+
+ws.addEventListener("close", (ev) => {
+    delete ws;
+    try_reconnect = true;
+});
+
+const ws_reconnector = (data) => {
+    request_count = 0
+    setInterval(function () {
+    if (try_reconnect) {
+        delete ws;
+
+        reconnect_counter++;
+
+        ws = new WebSocket(socket_path);
+
+        ws.addEventListener("message", (ev) => {
+        process_incoming_ws(ev.data);
+        });
+
+        ws.addEventListener("open", (ev) => {
+        console.log("opened");
+        reconnect_counter = 0;
+        try_reconnect = false;
+        send_initial_data_ws();
+        });
+
+        ws.addEventListener("close", (ev) => {
+        delete ws;
+        try_reconnect = true;
+        });
+    }
+
+    if(ws) {
+        selected_expirations = []
+        opened_buttons = $(".btn.btn-outline-secondary[aria-expanded='true']")
+        for(i=0; i<opened_buttons.length; i++) {
+            selected_expirations.push(opened_buttons[i].getAttribute("aria-controls"))
+        }
+
+        ws.send(
+            JSON.stringify({
+            "message-type": "give-me-da-data",
+            "message-source": "/quoting",
+            "user-secret": "none",
+            "request-body" : {
+                "selected-expirations" : selected_expirations,
+                "request-count" : request_count
+            }
+        }))
+
+        request_count++;
+    }
+
+    }, 1000);
+};
+
+
+const send_initial_data_ws = () => {
+    ws.send(
+    JSON.stringify({
+        "message-type": "initial",
+        "message-source": "/quoting",
+        "reconnect-counter": reconnect_counter,
+        "user-secret": "none",
+    })
+    );
+};
+
+const process_incoming_ws = (data) => {
+    const parsed_data = JSON.parse(data);
+
+    if (parsed_data["message-name"] == "send-updates") {
+
+        for(i in parsed_data["data"]) {
+            // // pricing_table_options[i].api.applyTransaction(myTransaction)
+            if(parsed_data["request-count"] == 0) {
+                {% for expiration_str in expirations_list %}
+                if(i == "{{ expiration_str }}") {
+                    pricing_table_options_{{ expiration_str }}.api.applyTransaction(parsed_data["data"][i])
+                }
+                {% endfor %}
+            }
+                        
+        }
+
+        // pricing_table_options
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    ws_reconnector();
+});
+
+</script>
+
+
+{% endblock %}

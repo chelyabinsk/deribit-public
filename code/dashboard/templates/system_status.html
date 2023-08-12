@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <script>
+        var cancel_fitter_endpoint = "{{ url_for('cancel_fitter_handler') }}"
+        var restart_fitter_endpoint = "{{ url_for('restart_fitter_handler') }}"
+        var fitter_status_endpoint = "{{ url_for('fitter_status_handler')}}"
+    </script>
+    <script src="static/pages/system_monitor.js"></script>
+
+    <h1 class="display-1">{% block title %} Status {% endblock %}</h1>
+
+    <span id="dashboard-status-badge" class="badge text-bg-success" data-toggle="tooltip" data-placement="top" title="Last updated on: ...">Dashboard: Running</span><a>  </a>
+    <span id="fitter-status-badge" class="badge text-bg-success" data-toggle="tooltip" data-placement="top" title="Last updated on: ...">Fitting: Running</span><a>  </a>
+    <span class="badge text-bg-danger" data-toggle="tooltip" data-placement="top" title="Last updated on: ...">Quoting: Stopped</span>
+    <br>
+    <br>
+    <p id="fitter-status-text" class="fst-normal"></p>
+    <div>
+        <h4 class="display-4">Fitter:  </a> 
+        <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+            <button id="kill-fitter-btn" type="button" class="btn btn-outline-dark">Stop</button>
+            <!-- <button id="status-fitter-btn" type="button" class="btn btn-warning">Refresh</button> -->
+            <button id="restart-fitter-btn" type="button" class="btn btn-outline-dark">Restart</button>
+        </div>
+    </div>
+    <br>
+    <div>
+        <h4 class="display-4">Quoting:  </a>
+        <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+            <button type="button" class="btn btn-outline-dark">Stop</button>
+            <!-- <button type="button" class="btn btn-warning">Refresh</button> -->
+            <button type="button" class="btn btn-outline-dark">Restart</button>
+        </div>
+    </div>
+{% endblock %}

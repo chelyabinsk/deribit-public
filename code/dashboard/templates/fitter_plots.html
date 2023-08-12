@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+
+<h1 class="display-1">{% block title %} Volatility Graph {% endblock %}</h1>
+
+<nav>
+    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+      {% for expiration_str in expirations_list %}
+        {% if loop.first %}
+            <button class="nav-link active" id="{{ expiration_str}}" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab" aria-controls="nav-profile" aria-selected="false">{{ expiration_str}}</button>
+        {% else %}
+            <button class="nav-link" id="{{ expiration_str}}" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab" aria-controls="nav-profile" aria-selected="false">{{ expiration_str}}</button>
+        {% endif %}
+       {% endfor %}
+    </div>
+  </nav>
+</nav>
+<canvas id="chart_combined_fit" height="100%"></canvas>
+<div class="form-check">
+    <input class="form-check-input" type="radio" name="flexRadioDefault" id="plotWithNormalisedStrikes" checked>
+    <label class="form-check-label" for="flexRadioDefault1">
+      Normalized Strike
+    </label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="radio" name="flexRadioDefault" id="plotWithNormalStrikes">
+    <label class="form-check-label" for="flexRadioDefault2">
+        Strike
+    </label>
+</div>
+
+
+
+
+
+<script>
+var selected_fitter_plot_expiration_str = "";
+{% for expiration_str in expirations_list %}{% if loop.first%}var selected_fitter_plot_expiration_str = "{{expiration_str}}"{% endif %}{% endfor %}
+
+var protocol = "wss://";
+if (location.hostname == "localhost") {
+  protocol = "ws://";
+}
+// Open websocket connection
+const socket_path = protocol + location.host + "/ws_data_point";
+var ws;
+var reconnect_counter = 0;
+var try_reconnect = false;
+
+ws = new WebSocket(socket_path);
+
+ws.addEventListener("message", (ev) => {
+  process_incoming_ws(ev.data);
+});
+
+ws.addEventListener("open", (ev) => {
+  console.log("opened");
+  reconnect_counter = 0;
+  try_reconnect = false;
+  send_initial_data_ws();
+});
+
+ws.addEventListener("close", (ev) => {
+  delete ws;
+  try_reconnect = true;
+});
+
+const ws_reconnector = (data) => {
+  setInterval(function () {
+    if (try_reconnect) {
+      delete ws;
+
+      reconnect_counter++;
+
+      ws = new WebSocket(socket_path);
+
+      ws.addEventListener("message", (ev) => {
+        process_incoming_ws(ev.data);
+      });
+
+      ws.addEventListener("open", (ev) => {
+        console.log("opened");
+        reconnect_counter = 0;
+        try_reconnect = false;
+        send_initial_data_ws();
+      });
+
+      ws.addEventListener("close", (ev) => {
+        delete ws;
+        try_reconnect = true;
+      });
+    }
+
+    if(ws) {
+        ws.send(
+            JSON.stringify({
+            "message-type": "give-me-da-data",
+            "message-source": "/fitters",
+            "user-secret": "none",
+            "request-body" : {
+                "selection-str" : selected_fitter_plot_expiration_str
+            }
+        })
+        )
+    }
+
+  }, 1000);
+};
+
+
+const send_initial_data_ws = () => {
+  ws.send(
+    JSON.stringify({
+      "message-type": "initial",
+      "message-source": "/fitters",
+      "reconnect-counter": reconnect_counter,
+      "user-secret": "none",
+    })
+  );
+};
+
+const process_incoming_ws = (data) => {
+    const parsed_data = JSON.parse(data);
+
+    if (parsed_data["message-name"] == "send-updates") {
+        // console.log(parsed_data["data"]);
+
+        // Update plots
+        // chart_combined_fit.data.datasets[0].data = parsed_data["data"]["active-fitters-tables"]["chart_fit_data"]["datasets"][0]["data"];
+        
+        if($("input[id='plotWithNormalisedStrikes']:checked").val()) {
+            config_combined.options.scales.x.title.text = "Normalized Strike"
+
+            chart_combined_fit.data.datasets[0].data = parsed_data["data"]["market_bid_point_ns_strike"];
+            chart_combined_fit.data.datasets[1].data = parsed_data["data"]["fitting_point_fair_ns_strike"];
+            chart_combined_fit.data.datasets[2].data = parsed_data["data"]["market_ask_point_ns_strike"];
+
+            chart_combined_fit.data.datasets[3].data = parsed_data["data"]["underlying_forward_ns_strike"];
+            chart_combined_fit.data.datasets[3].label = "forward-" + parsed_data["data"]["underlying_future_name"];
+        } else {
+            config_combined.options.scales.x.title.text = "Strike"
+
+            chart_combined_fit.data.datasets[0].data = parsed_data["data"]["market_bid_point_strike"];
+            chart_combined_fit.data.datasets[1].data = parsed_data["data"]["fitting_point_fair_strike"];
+            chart_combined_fit.data.datasets[2].data = parsed_data["data"]["market_ask_point_strike"];
+
+            chart_combined_fit.data.datasets[3].data = parsed_data["data"]["underlying_forward_strike"];
+            chart_combined_fit.data.datasets[3].label = "forward-" + parsed_data["data"]["underlying_future_name"];
+        }
+
+        chart_combined_fit.update();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    ws_reconnector();
+    initialise_plots();
+});
+
+</script>
+
+<script>
+    $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var target = $(e.target).attr("id")
+        selected_fitter_plot_expiration_str = target;
+    });
+</script>
+
+<script>
+    var combined_tools = null;
+
+    var chart_combined_fit = null;
+
+    var chart_combined_fit_data = {
+        datasets: [ 
+        {
+            label: 'bid',
+            data: [],
+            backgroundColor: 'rgb(255, 99, 132)',
+            pointBorderColor: ['#000000'],
+        },
+        {
+            label: 'fair',
+            data: [],
+            backgroundColor: 'rgb(99, 255, 132)',
+            showLine: false,
+        },
+        {
+            label: 'ask',
+            data: [],
+            backgroundColor: 'rgb(132, 99, 255)',
+            pointBorderColor: ['#000000'],
+        },
+        {
+            label: 'forward-underlying',
+            data: [],
+            backgroundColor: 'rgb(192, 192, 192)',
+            borderColor: 'rgb(192, 192, 192)',
+            showLine: true,
+            yAxisID: 'y1',
+            pointRadius: 0,
+        },   
+        ],
+    };
+
+    const initialise_plots = () => {
+    const ctx_combined = document.getElementById('chart_combined_fit');
+
+    config_combined = {
+            type: 'scatter',
+            data: chart_combined_fit_data,
+            options: {
+                resposive: true,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: '-'
+                        },
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Implied Vol (%)'
+                        },
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: false,
+                        position: 'right',
+
+                        // grid line settings
+                        grid: {
+                            drawOnChartArea: false, // only want the grid lines for one axis to show up
+                        },
+
+                        title: {
+                            display: false,
+                            text: 'Probability Density Function'
+                        },
+                    },
+                },
+                title: {
+                    display: true,
+                    text: 'Volatility fit - Put'
+                },
+                plugins: {
+                    annotation: {
+                        annotations: {
+                            line: {
+                                type: 'line',
+                                xMin: 0,
+                                xMax: 0,
+                                borderColor: 'rgb(192, 192, 192)',
+                                borderWidth: 2,
+                            }
+                        }
+                    },
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                                modifierKey: "alt",
+                            },
+                            pinch: {
+                                enabled: true,
+                                modifierKey: "alt",
+                            },
+                            mode: 'xy',
+                        }
+                    },
+                    pan: {
+                        enabled: true,
+                    },
+                    drag: {
+                        enabled: true,
+                    },
+                }
+            }
+        };
+
+        chart_combined_fit = new Chart(ctx_combined, config_combined);
+    }
+
+</script>
+
+
+
+{% endblock %}
